@@ -12,6 +12,7 @@ const session = require("express-session");
 const {isAdminAuthenticated,isLoggedin} = require('./middleware');
 const Admin = require("./models/admin");
 const methodOverride = require('method-override');
+const { console } = require("inspector");
 
 const sessionOptions = {
   secret: "MYSECRET",
@@ -42,82 +43,91 @@ app.use(cookieParser());
 
 app.use((req, res, next) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  console.log("User IP:", ip);
   next();
 });
+
 app.set('trust proxy', true);  // Important for Render or Heroku
 
 app.get("/claim",(req,res)=>{
     res.render("home.ejs",{ message: null, success: false });
 })
 
-app.post("/claim",async(req,res)=>{
-    const ip = req.ip;
-    const cookieId = req.cookies?.cid || uuidv4();
-    const username = req.body.username;
+app.post("/claim", async (req, res) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  console.log(ip);
+  const cookieId = req.cookies?.cid || uuidv4();
+  const username = req.body.username;
 
-    if (!req.cookies?.cid) {
-        res.cookie('cid',
-          cookieId, 
-          { maxAge: 30 * 24 * 60 * 60 * 1000 }); // 30 days
-      }
+  if (!req.cookies?.cid) {
+    res.cookie('cid', cookieId, {
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+  }
 
-    
-      // 1. Check if this IP or cookie already claimed
-      const existingUser = await User.find({
-        $or: [
-          { 'claimedBy.ip': ip },
-          { 'claimedBy.cookieId': cookieId }
-        ],
-        isClaimed: true,
-      });
+  // 1. Check if this IP or cookie already claimed
+  const existingUser = await User.findOne({
+    isClaimed: true,
+    $or: [
+      { 'claimedBy.ip': ip },
+      { 'claimedBy.cookieId': cookieId }
+    ]
+  });
+  
+
+  if (existingUser) {
+    return res.render('claimCoupon', {
+      message: "⚠️ You have already claimed a coupon.",
+      success: false,
+      couponCode: existingUser.code,
+      username
+    });
+  }
+
+  // 2. Assign coupon (with retry fallback)
+  let coupon = await Coupon.findOneAndUpdate(
+    { used: false },
+    { $set: { used: true, assignedTo: username } },
+    { new: true }
+  );
+
+  if (!coupon) {
+    // Retry once
+    coupon = await Coupon.findOneAndUpdate(
+      { used: false },
+      { $set: { used: true, assignedTo: username } },
+      { sort: { _id: 1 }, new: true }
+    );
+  }
 
 
-      if (existingUser.length>0) {
-        return res.render('claimCoupon', {
-          message: "⚠️ You have already claimed a coupon.",
-          success: false,
-          couponCode:existingUser[0].code,
-          username:username
-        });
-      }
-    
-      // 2. Assign coupon
-      const coupon = await Coupon.findOneAndUpdate(
-        { used: false },
-        { $set: { used: true, assignedTo: username } },
-        { sort: { _id: 1 }, new: true }
-      );
-      
+  if (!coupon) {
+    return res.render('claimCoupon', {
+      message: "❌ No coupons left.",
+      success: false
+    });
+  }
 
-      if (!coupon) {
-        return res.render('claimCoupon', {
-          message: "❌ No coupons left.",
-          success: false
-        });
-      }
-    
-      // 3. Create user record to log the claim
-      const userData = new User({
-        isClaimed: true,
-        claimedBy: {
-          ip,
-          cookieId,
-          timestamp: new Date()
-        },
-        isActive: true,
-        code: coupon.code
-      });
-    
-      await userData.save();
-    
-      // 4. Show the coupon
-      res.render('claimCoupon', {
-        username,
-        couponCode: coupon.code
-      });
-      
+  // 3. Create user record
+  const userData = new User({
+    isClaimed: true,
+    claimedBy: {
+      ip,
+      cookieId,
+      timestamp: new Date()
+    },
+    isActive: true,
+    code: coupon.code
+  });
+
+  await userData.save();
+
+  // 4. Show the coupon
+  res.render('claimCoupon', {
+    username,
+    couponCode: coupon.code
+  });
 });
+
 
 // Show login page
 app.get("/admin/login", (req, res) => {
