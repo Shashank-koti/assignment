@@ -85,9 +85,10 @@ app.post("/claim",async(req,res)=>{
       // 2. Assign coupon
       const coupon = await Coupon.findOneAndUpdate(
         { used: false },
-        { used: true, assignedTo: username },
-        { new: true }
+        { $set: { used: true, assignedTo: username } },
+        { sort: { _id: 1 }, new: true }
       );
+      
 
       if (!coupon) {
         return res.render('claimCoupon', {
