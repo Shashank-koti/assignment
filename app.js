@@ -27,13 +27,6 @@ passport.use(new LocalStrategy(Admin.authenticate()));
 passport.serializeUser(Admin.serializeUser());
 passport.deserializeUser(Admin.deserializeUser());
 
-app.use((req, res, next) => {
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  console.log("User IP:", ip);
-  next();
-});
-app.set('trust proxy', true);  // Important for Render or Heroku
-
 
 mongoose.connect("mongodb+srv://shashankkoti05:assignment@assignmentcluster.o82ca.mongodb.net/?retryWrites=true&w=majority&appName=assignmentCluster").then(()=>{
     console.log("mongodb connected");
@@ -47,6 +40,12 @@ app.use(express.urlencoded({extended:true}));
 app.use(cookieParser());
 // app.use(methodOverride("_method"));
 
+app.use((req, res, next) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  console.log("User IP:", ip);
+  next();
+});
+app.set('trust proxy', true);  // Important for Render or Heroku
 
 app.get("/claim",(req,res)=>{
     res.render("home.ejs",{ message: null, success: false });
