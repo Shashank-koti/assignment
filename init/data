@@ -1,0 +1,16 @@
+const sampleCoupon = [
+  { code: "RR2025-4GHTY", used: false },
+  { code: "RR2025-9KJUY", used: false},
+  { code: "RR2025-1XZPL", used: false},
+  { code: "RR2025-7MQWE", used: false},
+  { code: "RR2025-3NBVC", used: false},
+  { code: "RR2025-6PLKO", used: false},
+  { code: "RR2025-8UJMI", used: false},
+  { code: "RR2025-2LKJU", used: false},
+  { code: "RR2025-5YTRE", used: false},
+  { code: "RR2025-0ZAXS", used: false}
+];
+
+
+
+module.exports = sampleCoupon;

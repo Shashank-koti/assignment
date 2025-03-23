@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Claim Coupon</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+    <div class="card p-4" style="width: 100%; max-width: 450px;">
+      <h3 class="text-center mb-4">🎁 Claim Your Coupon</h3>
+
+      <% if (message) { %>
+        <div class="alert alert-<%= success ? 'success' : 'danger' %>">
+          <%= message %>
+        </div>
+      <% } %>
+
+      <form action="/claim" method="POST">
+        <div class="mb-3">
+          <label for="username" class="form-label">Your Name</label>
+          <input type="text" class="form-control" id="username" name="username" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Claim Coupon</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
